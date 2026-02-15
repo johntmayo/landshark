@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SNL Cast Timeline</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#0a0a0f;--surface:#131320;--surface2:#1a1a2e;--surface3:#222240;
+    --border:#2a2a44;--text:#e0e0ec;--text2:#9898b0;--text3:#606078;
+    --accent:#e6c619;--accent2:#ff6b35;
+    --rep:#e63946;--feat:#457b9d;--both:linear-gradient(90deg,#457b9d,#e63946);
+    --update:#2a9d8f;
+    --shadow:0 8px 32px rgba(0,0,0,.6);
+  }
+  html{font-size:14px}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple-system,sans-serif;overflow:hidden;height:100vh}
+  ::selection{background:var(--accent);color:var(--bg)}
+  ::-webkit-scrollbar{width:7px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:4px}
+
+  /* === LAYOUT === */
+  #app{display:grid;grid-template-rows:auto auto 1fr;height:100vh}
+
+  /* === HEADER === */
+  header{background:linear-gradient(135deg,#0d0d1a,#1a1a2e);padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;flex-wrap:wrap;z-index:100}
+  .logo{font-size:1.4rem;font-weight:700;letter-spacing:1.5px;white-space:nowrap}
+  .logo span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:1}
+  .search-wrap{position:relative}
+  .search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:15px;height:15px;fill:var(--text3)}
+  .search-wrap input{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 12px 7px 32px;border-radius:6px;font-size:.85rem;width:200px;outline:none;transition:border-color .2s;font-family:inherit}
+  .search-wrap input:focus{border-color:var(--accent)}
+  .search-wrap input::placeholder{color:var(--text3)}
+
+  .fbtn{background:var(--surface2);border:1px solid var(--border);color:var(--text2);padding:5px 11px;border-radius:6px;font-size:.75rem;cursor:pointer;transition:all .15s;font-family:inherit;font-weight:500;letter-spacing:.3px}
+  .fbtn:hover{border-color:var(--text3);color:var(--text)}
+  .fbtn.active{font-weight:600}
+  .fbtn.active[data-f="repertory"]{background:rgba(230,57,70,.15);border-color:var(--rep);color:var(--rep)}
+  .fbtn.active[data-f="featured"]{background:rgba(69,123,157,.15);border-color:var(--feat);color:var(--feat)}
+  .fbtn.active[data-f="weekendUpdate"]{background:rgba(42,157,143,.15);border-color:var(--update);color:var(--update)}
+
+  .sep{width:1px;height:20px;background:var(--border);margin:0 2px}
+  .count{color:var(--text3);font-size:.8rem;white-space:nowrap}
+
+  .season-ctrl{display:flex;align-items:center;gap:8px;margin-left:auto;position:relative}
+  .season-ctrl label{color:var(--text3);font-size:.75rem;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+  .season-slider{-webkit-appearance:none;width:340px;height:6px;background:var(--surface2);border-radius:3px;outline:none;cursor:pointer}
+  .season-slider:focus{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
+  .season-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;background:var(--accent);border-radius:50%;cursor:pointer;box-shadow:0 0 8px rgba(230,198,25,.5)}
+  .season-slider::-moz-range-thumb{width:18px;height:18px;background:var(--accent);border-radius:50%;cursor:pointer;border:none}
+  .season-val{font-size:.8rem;font-weight:600;color:var(--accent);width:160px;min-width:160px;cursor:pointer;padding:4px 8px;border-radius:6px;border:1px solid transparent;transition:all .15s;user-select:none}
+  .season-val:hover,.season-val.picker-open{background:var(--surface2);border-color:var(--border)}
+  .season-val::after{content:'▾';margin-left:5px;font-size:.6rem;opacity:.6}
+
+  /* Season Picker Dropdown */
+  .season-picker{position:absolute;top:100%;right:0;margin-top:6px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);z-index:200;width:380px;max-height:80vh;overflow-y:auto;display:none;padding:12px}
+  .season-picker.open{display:block}
+  .sp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding:0 2px}
+  .sp-header h3{color:var(--text);font-size:.85rem;font-weight:600}
+  .sp-all{background:var(--surface2);border:1px solid var(--border);color:var(--text2);padding:4px 12px;border-radius:5px;font-size:.72rem;cursor:pointer;font-family:inherit;font-weight:500;transition:all .15s}
+  .sp-all:hover{border-color:var(--accent);color:var(--accent)}
+  .sp-era{margin-bottom:10px}
+  .sp-era-label{font-size:.65rem;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);font-weight:600;margin-bottom:5px;padding-left:2px;display:flex;align-items:center;gap:6px}
+  .sp-era-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .sp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:4px}
+  .sp-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text2);padding:6px 4px;border-radius:5px;font-size:.7rem;cursor:pointer;text-align:center;transition:all .15s;font-family:inherit;line-height:1.3}
+  .sp-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(230,198,25,.06)}
+  .sp-btn.active{background:rgba(230,198,25,.12);border-color:var(--accent);color:var(--accent);font-weight:600}
+  .sp-btn .sp-snum{display:block;font-weight:600;font-size:.75rem}
+  .sp-btn .sp-yr{display:block;font-size:.58rem;opacity:.6}
+
+  /* Season info in right panel */
+  .sd-group{margin-bottom:12px}
+  .sd-group h4{font-size:.65rem;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);font-weight:600;margin-bottom:6px}
+  .sd-cast{display:flex;flex-wrap:wrap;gap:4px}
+  .sd-cast-tag{font-size:.72rem;padding:3px 8px;border-radius:4px;cursor:pointer;transition:all .15s;white-space:nowrap}
+  .sd-cast-tag:hover{filter:brightness(1.3)}
+  .sd-cast-tag.rep{background:rgba(230,57,70,.12);color:var(--rep);border:1px solid rgba(230,57,70,.2)}
+  .sd-cast-tag.feat{background:rgba(69,123,157,.12);color:var(--feat);border:1px solid rgba(69,123,157,.2)}
+  .sd-cast-tag.wu{background:rgba(42,157,143,.12);color:var(--update);border:1px solid rgba(42,157,143,.2)}
+
+  .legend{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-left:8px}
+  .legend-item{display:flex;align-items:center;gap:5px;font-size:.7rem;color:var(--text3)}
+  .legend-sw{width:14px;height:10px;border-radius:2px}
+
+  /* === ERA BAR === */
+  .era-bar{background:var(--surface);border-bottom:1px solid var(--border);display:flex;height:26px;overflow:hidden}
+  .era-spacer{width:170px;min-width:170px;border-right:1px solid var(--border);display:flex;align-items:center;padding-left:10px;font-size:.65rem;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;font-weight:600}
+  .era-track{flex:1;position:relative;overflow:hidden}
+  .era-seg{position:absolute;top:0;height:100%;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:600;letter-spacing:.4px;color:rgba(255,255,255,.85);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 4px}
+
+  /* === MAIN AREA === */
+  .main{display:flex;overflow:hidden;flex:1}
+
+  /* === CHART === */
+  .chart-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+  /* year header */
+  .yr-head{display:flex;background:var(--surface);border-bottom:1px solid var(--border);height:26px;flex-shrink:0}
+  .yr-head-spacer{width:170px;min-width:170px;border-right:1px solid var(--border)}
+  .yr-labels{flex:1;position:relative;overflow:hidden}
+  .yr-lbl{position:absolute;top:0;line-height:26px;font-size:.65rem;color:var(--text3);transform:translateX(-50%);white-space:nowrap;cursor:pointer;transition:color .15s}
+  .yr-lbl:hover{color:var(--accent)}
+  .yr-lbl.hl{color:var(--accent);font-weight:700}
+
+  /* chart body */
+  .chart-body{flex:1;overflow-y:auto;overflow-x:hidden}
+
+  /* rows */
+  .row{display:flex;min-height:23px;border-bottom:1px solid rgba(42,42,68,.3);transition:background .15s,opacity .25s;cursor:pointer}
+  .row:hover{background:rgba(230,198,25,.04)}
+  .row.dimmed{opacity:.12}
+  .row.sel{background:rgba(230,198,25,.1)}
+  .row .nm{width:170px;min-width:170px;padding:3px 10px;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;border-right:1px solid rgba(42,42,68,.4);transition:color .15s}
+  .row:hover .nm{color:var(--accent)}
+  .row.sel .nm{color:var(--accent);font-weight:600}
+  .row .tl{flex:1;position:relative;height:23px}
+
+  /* grid lines */
+  .gl{position:absolute;top:0;bottom:0;width:1px;pointer-events:none}
+  .gl.minor{background:rgba(42,42,68,.35)}
+  .gl.major{background:rgba(42,42,68,.7)}
+
+  /* season highlight */
+  .shl{position:absolute;top:0;bottom:0;background:rgba(230,198,25,.07);border-left:1px dashed rgba(230,198,25,.4);pointer-events:none;z-index:3}
+
+  /* bars */
+  .bar{position:absolute;top:4px;height:15px;border-radius:3px;z-index:4;transition:transform .1s;min-width:4px}
+  .bar:hover{transform:scaleY(1.35);z-index:10;filter:brightness(1.2)}
+  .bar.rep{background:var(--rep)}
+  .bar.feat{background:var(--feat)}
+  .bar.both{background:linear-gradient(90deg,#457b9d,#e63946)}
+  .bar.wu::after{content:'';position:absolute;top:-3px;right:-3px;width:7px;height:7px;background:var(--update);border-radius:50%;box-shadow:0 0 4px rgba(42,157,143,.6)}
+  .bar.current{border-right:2px solid rgba(255,255,255,.4);border-top-right-radius:0;border-bottom-right-radius:0}
+  .bar .new-dot{position:absolute;bottom:-3px;left:-3px;width:7px;height:7px;background:#22c55e;border-radius:50%;box-shadow:0 0 4px rgba(34,197,94,.6);z-index:2}
+  .bar .last-dot{position:absolute;bottom:-3px;right:-3px;width:7px;height:7px;background:#f97316;border-radius:50%;box-shadow:0 0 4px rgba(249,115,22,.6);z-index:2}
+
+  /* === TOOLTIP === */
+  .tip{position:fixed;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;z-index:1000;pointer-events:none;box-shadow:var(--shadow);max-width:300px;font-size:.82rem;opacity:0;transition:opacity .12s}
+  .tip.on{opacity:1}
+  .tip h3{color:var(--accent);font-size:1rem;margin-bottom:4px}
+  .tip .yrs{color:var(--text2);margin-bottom:6px}
+  .tip .tags{display:flex;flex-wrap:wrap;gap:4px}
+  .tip .tag{padding:2px 8px;border-radius:4px;font-size:.7rem;font-weight:600}
+
+  /* === DETAIL PANEL === */
+  .panel{width:0;overflow:hidden;transition:width .25s ease;background:var(--surface);border-left:1px solid var(--border);flex-shrink:0}
+  .panel.open{width:320px}
+  .panel-inner{width:320px;padding:20px;overflow-y:auto;height:100%}
+  .panel-close{float:right;background:none;border:none;color:var(--text3);font-size:1.4rem;cursor:pointer;padding:0 4px;line-height:1}
+  .panel-close:hover{color:var(--text)}
+  .panel-inner h2{color:var(--accent);font-size:1.2rem;margin:6px 0 4px;clear:both}
+  .panel-sub{color:var(--text2);font-size:.85rem;margin-bottom:14px}
+  .psec{margin-bottom:16px}
+  .psec h3{color:var(--text3);font-size:.72rem;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;font-weight:600}
+  .mini-tl{background:var(--bg);border-radius:6px;padding:10px;position:relative;height:36px;margin-bottom:4px}
+  .mini-bar{position:absolute;top:10px;height:16px;border-radius:3px}
+  .mini-lbl{display:flex;justify-content:space-between;font-size:.6rem;color:var(--text3)}
+  .p-badges{display:flex;flex-wrap:wrap;gap:5px}
+  .pbadge{padding:3px 10px;border-radius:5px;font-size:.75rem;font-weight:600}
+  .pbadge.rep{background:rgba(230,57,70,.15);color:var(--rep);border:1px solid rgba(230,57,70,.25)}
+  .pbadge.feat{background:rgba(69,123,157,.15);color:var(--feat);border:1px solid rgba(69,123,157,.25)}
+  .pbadge.wu{background:rgba(42,157,143,.15);color:var(--update);border:1px solid rgba(42,157,143,.25)}
+  .p-stints{list-style:none}
+  .p-stints li{padding:5px 0;border-bottom:1px solid var(--border);color:var(--text2);font-size:.82rem}
+  .p-stints li:last-child{border-bottom:none}
+  .p-stat{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(42,42,68,.3);font-size:.82rem}
+  .p-stat-k{color:var(--text3)}
+  .p-stat-v{font-weight:600}
+  .castmates{display:flex;flex-wrap:wrap;gap:4px;max-height:200px;overflow-y:auto}
+  .cm-tag{font-size:.68rem;padding:2px 7px;background:var(--bg);border-radius:4px;color:var(--text3);cursor:pointer;transition:color .15s}
+  .cm-tag:hover{color:var(--accent)}
+
+  @media(max-width:900px){
+    .nm,.yr-head-spacer,.era-spacer{width:120px!important;min-width:120px!important}
+    .panel.open{width:260px}
+    .panel-inner{width:260px}
+    .season-picker{width:320px}
+  }
+  @media(max-width:640px){
+    header{padding:10px 12px;gap:8px}
+    .logo{font-size:1.1rem}
+    .controls{gap:6px}
+    .search-wrap input{width:140px;font-size:.8rem;padding:6px 10px 6px 28px}
+    .fbtn{padding:4px 8px;font-size:.7rem}
+    .legend{display:none}
+    .sep{display:none}
+    .season-ctrl{margin-left:0;flex-basis:100%;justify-content:flex-start}
+    .season-slider{width:200px}
+    .season-picker{width:calc(100vw - 24px);right:-12px}
+    .sp-grid{grid-template-columns:repeat(auto-fill,minmax(52px,1fr))}
+    .nm,.yr-head-spacer,.era-spacer{width:90px!important;min-width:90px!important;font-size:.7rem!important}
+    .panel.open{position:fixed;top:0;right:0;bottom:0;width:100vw;z-index:300;max-width:100vw}
+    .panel-inner{width:100%;max-width:100vw}
+    .era-spacer{padding-left:4px!important}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <div class="logo"><span>SNL</span> Cast Timeline</div>
+  <div class="controls">
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <input type="text" id="search" placeholder="Search cast members...">
+    </div>
+    <button class="fbtn" data-f="repertory">Repertory</button>
+    <button class="fbtn" data-f="featured">Featured</button>
+    <button class="fbtn" data-f="weekendUpdate">WU Anchor</button>
+    <span class="count" id="count"></span>
+    <div class="sep"></div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-sw" style="background:var(--rep)"></div>Repertory</div>
+      <div class="legend-item"><div class="legend-sw" style="background:var(--feat)"></div>Featured</div>
+      <div class="legend-item"><div class="legend-sw" style="background:linear-gradient(90deg,#457b9d,#e63946)"></div>Both</div>
+      <div class="legend-item"><div style="width:7px;height:7px;border-radius:50%;background:var(--update);box-shadow:0 0 4px rgba(42,157,143,.5)"></div>Update Anchor</div>
+      <div class="legend-item season-legend" style="display:none"><div style="width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 4px rgba(34,197,94,.5)"></div>New</div>
+      <div class="legend-item season-legend" style="display:none"><div style="width:7px;height:7px;border-radius:50%;background:#f97316;box-shadow:0 0 4px rgba(249,115,22,.5)"></div>Last Season</div>
+    </div>
+    <div class="season-ctrl">
+      <label>Season</label>
+      <input type="range" class="season-slider" id="slider" min="0" max="51" value="0" step="1" tabindex="0">
+      <span class="season-val" id="sval" onclick="togglePicker()">All Seasons</span>
+      <div class="season-picker" id="seasonPicker"></div>
+    </div>
+  </div>
+</header>
+
+<div class="era-bar">
+  <div class="era-spacer">Eras</div>
+  <div class="era-track" id="eraTrack"></div>
+</div>
+
+<div class="main">
+  <div class="chart-wrap">
+    <div class="yr-head">
+      <div class="yr-head-spacer"></div>
+      <div class="yr-labels" id="yrLabels"></div>
+    </div>
+    <div class="chart-body" id="chartBody"></div>
+  </div>
+  <div class="panel" id="panel">
+    <div class="panel-inner" id="panelInner"></div>
+  </div>
+</div>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const D=[
+{n:"Fred Armisen",s:[{a:2002,b:2013}],t:11,r:1,f:1,w:0},
+{n:"Aristotle Athari",s:[{a:2021,b:2022}],t:1,r:0,f:1,w:0},
+{n:"Dan Aykroyd",s:[{a:1975,b:1979}],t:4,r:1,f:0,w:1},
+{n:"Peter Aykroyd",s:[{a:1980,b:1980}],t:1,r:0,f:1,w:0},
+{n:"Morwenna Banks",s:[{a:1995,b:1995}],t:1,r:1,f:0,w:0},
+{n:"Vanessa Bayer",s:[{a:2010,b:2017}],t:7,r:1,f:1,w:0},
+{n:"Jim Belushi",s:[{a:1983,b:1985}],t:2,r:1,f:0,w:0},
+{n:"John Belushi",s:[{a:1975,b:1979}],t:4,r:1,f:0,w:0},
+{n:"Beck Bennett",s:[{a:2013,b:2021}],t:8,r:1,f:1,w:0},
+{n:"Tommy Brennan",s:[{a:2025,b:2026}],t:1,r:0,f:1,w:0},
+{n:"Jim Breuer",s:[{a:1995,b:1998}],t:3,r:1,f:0,w:0},
+{n:"Paul Brittain",s:[{a:2010,b:2012}],t:2,r:0,f:1,w:0},
+{n:"A. Whitney Brown",s:[{a:1986,b:1991}],t:6,r:0,f:1,w:0},
+{n:"Aidy Bryant",s:[{a:2012,b:2022}],t:10,r:1,f:1,w:0},
+{n:"Beth Cahill",s:[{a:1991,b:1992}],t:1,r:0,f:1,w:0},
+{n:"Dana Carvey",s:[{a:1986,b:1993}],t:7,r:1,f:0,w:0},
+{n:"Chevy Chase",s:[{a:1975,b:1976}],t:2,r:1,f:0,w:1},
+{n:"Michael Che",s:[{a:2014,b:2026}],t:12,r:1,f:1,w:1},
+{n:"Ellen Cleghorne",s:[{a:1991,b:1995}],t:4,r:1,f:0,w:0},
+{n:"George Coe",s:[{a:1975,b:1975}],t:1,r:1,f:0,w:0},
+{n:"Billy Crystal",s:[{a:1984,b:1985}],t:1,r:1,f:0,w:1},
+{n:"Jane Curtin",s:[{a:1975,b:1980}],t:5,r:1,f:0,w:1},
+{n:"Jeremy Culhane",s:[{a:2025,b:2026}],t:1,r:0,f:1,w:0},
+{n:"Joan Cusack",s:[{a:1985,b:1986}],t:1,r:1,f:0,w:0},
+{n:"Pete Davidson",s:[{a:2014,b:2022}],t:8,r:1,f:1,w:0},
+{n:"Tom Davis",s:[{a:1979,b:1980}],t:1,r:0,f:1,w:0},
+{n:"Mikey Day",s:[{a:2016,b:2026}],t:10,r:1,f:1,w:0},
+{n:"Denny Dillon",s:[{a:1980,b:1981}],t:1,r:1,f:0,w:0},
+{n:"Andrew Dismukes",s:[{a:2020,b:2026}],t:6,r:1,f:1,w:0},
+{n:"Jim Downey",s:[{a:1980,b:1980}],t:1,r:0,f:1,w:0},
+{n:"Robert Downey Jr.",s:[{a:1985,b:1986}],t:1,r:1,f:0,w:0},
+{n:"Brian Doyle-Murray",s:[{a:1980,b:1980},{a:1981,b:1982}],t:2,r:1,f:1,w:1},
+{n:"Rachel Dratch",s:[{a:1999,b:2006}],t:7,r:1,f:1,w:0},
+{n:"Robin Duke",s:[{a:1981,b:1984}],t:4,r:1,f:0,w:0},
+{n:"Nora Dunn",s:[{a:1985,b:1990}],t:5,r:1,f:0,w:0},
+{n:"Christine Ebersole",s:[{a:1981,b:1982}],t:1,r:1,f:0,w:1},
+{n:"Dean Edwards",s:[{a:2001,b:2003}],t:2,r:0,f:1,w:0},
+{n:"Abby Elliott",s:[{a:2008,b:2012}],t:4,r:1,f:1,w:0},
+{n:"Chris Elliott",s:[{a:1994,b:1995}],t:1,r:1,f:0,w:0},
+{n:"Jimmy Fallon",s:[{a:1998,b:2004}],t:6,r:1,f:1,w:1},
+{n:"Siobhan Fallon",s:[{a:1991,b:1992}],t:1,r:0,f:0,w:0},
+{n:"Chris Farley",s:[{a:1990,b:1995}],t:5,r:1,f:0,w:0},
+{n:"Will Ferrell",s:[{a:1995,b:2002}],t:7,r:1,f:0,w:0},
+{n:"Tina Fey",s:[{a:2000,b:2006}],t:6,r:1,f:1,w:1},
+{n:"Chloe Fineman",s:[{a:2019,b:2026}],t:7,r:1,f:1,w:0},
+{n:"Will Forte",s:[{a:2002,b:2010}],t:8,r:1,f:1,w:0},
+{n:"Al Franken",s:[{a:1979,b:1980},{a:1986,b:1986},{a:1988,b:1995}],t:8,r:0,f:1,w:0},
+{n:"Heidi Gardner",s:[{a:2017,b:2025}],t:8,r:1,f:1,w:0},
+{n:"Janeane Garofalo",s:[{a:1994,b:1995}],t:1,r:1,f:0,w:0},
+{n:"Ana Gasteyer",s:[{a:1996,b:2002}],t:6,r:1,f:0,w:0},
+{n:"Gilbert Gottfried",s:[{a:1980,b:1981}],t:1,r:1,f:0,w:0},
+{n:"Mary Gross",s:[{a:1981,b:1985}],t:4,r:1,f:0,w:1},
+{n:"Christopher Guest",s:[{a:1984,b:1985}],t:1,r:1,f:0,w:1},
+{n:"Bill Hader",s:[{a:2005,b:2013}],t:8,r:1,f:1,w:0},
+{n:"Anthony Michael Hall",s:[{a:1985,b:1986}],t:1,r:1,f:0,w:0},
+{n:"Brad Hall",s:[{a:1982,b:1984}],t:2,r:1,f:0,w:1},
+{n:"Rich Hall",s:[{a:1984,b:1985}],t:1,r:1,f:0,w:0},
+{n:"Darrell Hammond",s:[{a:1995,b:2009}],t:14,r:1,f:0,w:0},
+{n:"Phil Hartman",s:[{a:1986,b:1994}],t:8,r:1,f:0,w:0},
+{n:"Marcello Hern\u00e1ndez",s:[{a:2022,b:2026}],t:4,r:1,f:1,w:0},
+{n:"Lauren Holt",s:[{a:2020,b:2021}],t:1,r:0,f:1,w:0},
+{n:"Jan Hooks",s:[{a:1986,b:1991}],t:5,r:1,f:0,w:0},
+{n:"Yvonne Hudson",s:[{a:1980,b:1981}],t:1,r:0,f:1,w:0},
+{n:"Melanie Hutsell",s:[{a:1991,b:1994}],t:3,r:1,f:1,w:0},
+{n:"Victoria Jackson",s:[{a:1986,b:1992}],t:6,r:1,f:0,w:0},
+{n:"James Austin Johnson",s:[{a:2021,b:2026}],t:5,r:1,f:1,w:0},
+{n:"Punkie Johnson",s:[{a:2020,b:2024}],t:4,r:1,f:1,w:0},
+{n:"Leslie Jones",s:[{a:2014,b:2019}],t:5,r:1,f:1,w:0},
+{n:"Colin Jost",s:[{a:2014,b:2026}],t:13,r:1,f:1,w:1},
+{n:"Chris Kattan",s:[{a:1996,b:2003}],t:8,r:1,f:1,w:0},
+{n:"Tim Kazurinsky",s:[{a:1981,b:1984}],t:4,r:1,f:0,w:0},
+{n:"Molly Kearney",s:[{a:2022,b:2024}],t:2,r:0,f:1,w:0},
+{n:"Laura Kightlinger",s:[{a:1994,b:1995}],t:1,r:0,f:1,w:0},
+{n:"Taran Killam",s:[{a:2010,b:2016}],t:6,r:1,f:1,w:0},
+{n:"David Koechner",s:[{a:1995,b:1996}],t:1,r:1,f:0,w:0},
+{n:"Gary Kroeger",s:[{a:1982,b:1985}],t:3,r:1,f:0,w:0},
+{n:"Matthew Laurance",s:[{a:1980,b:1981}],t:1,r:0,f:1,w:0},
+{n:"Michael Longfellow",s:[{a:2022,b:2025}],t:3,r:1,f:1,w:0},
+{n:"Julia Louis-Dreyfus",s:[{a:1982,b:1985}],t:3,r:1,f:0,w:0},
+{n:"Jon Lovitz",s:[{a:1985,b:1990}],t:5,r:1,f:0,w:0},
+{n:"Norm Macdonald",s:[{a:1993,b:1998}],t:5,r:1,f:1,w:1},
+{n:"Ben Marshall",s:[{a:2025,b:2026}],t:1,r:0,f:1,w:0},
+{n:"Gail Matthius",s:[{a:1980,b:1981}],t:1,r:1,f:0,w:1},
+{n:"Michael McKean",s:[{a:1994,b:1995}],t:2,r:1,f:0,w:0},
+{n:"Mark McKinney",s:[{a:1995,b:1997}],t:3,r:1,f:0,w:0},
+{n:"Kate McKinnon",s:[{a:2012,b:2022}],t:11,r:1,f:1,w:0},
+{n:"Tim Meadows",s:[{a:1991,b:2000}],t:10,r:1,f:0,w:0},
+{n:"Laurie Metcalf",s:[{a:1981,b:1981}],t:1,r:0,f:1,w:0},
+{n:"Seth Meyers",s:[{a:2001,b:2014}],t:13,r:1,f:1,w:1},
+{n:"John Milhiser",s:[{a:2013,b:2014}],t:1,r:0,f:1,w:0},
+{n:"Dennis Miller",s:[{a:1985,b:1991}],t:6,r:1,f:0,w:1},
+{n:"Jerry Minor",s:[{a:2000,b:2001}],t:1,r:0,f:1,w:0},
+{n:"Finesse Mitchell",s:[{a:2003,b:2006}],t:3,r:1,f:1,w:0},
+{n:"Alex Moffat",s:[{a:2016,b:2022}],t:6,r:1,f:1,w:0},
+{n:"Jay Mohr",s:[{a:1993,b:1995}],t:2,r:0,f:1,w:0},
+{n:"Kyle Mooney",s:[{a:2013,b:2022}],t:9,r:1,f:1,w:0},
+{n:"Tracy Morgan",s:[{a:1996,b:2003}],t:7,r:1,f:0,w:0},
+{n:"Garrett Morris",s:[{a:1975,b:1980}],t:5,r:1,f:0,w:0},
+{n:"Bobby Moynihan",s:[{a:2008,b:2017}],t:9,r:1,f:1,w:0},
+{n:"Eddie Murphy",s:[{a:1980,b:1984}],t:4,r:1,f:1,w:0},
+{n:"Bill Murray",s:[{a:1977,b:1980}],t:4,r:1,f:0,w:1},
+{n:"Mike Myers",s:[{a:1989,b:1995}],t:7,r:1,f:1,w:0},
+{n:"Kevin Nealon",s:[{a:1986,b:1995}],t:9,r:1,f:1,w:1},
+{n:"Laraine Newman",s:[{a:1975,b:1980}],t:5,r:1,f:0,w:0},
+{n:"Don Novello",s:[{a:1979,b:1980},{a:1985,b:1986}],t:2,r:0,f:1,w:0},
+{n:"Luke Null",s:[{a:2017,b:2018}],t:1,r:0,f:1,w:0},
+{n:"Ego Nwodim",s:[{a:2018,b:2025}],t:7,r:1,f:1,w:0},
+{n:"Mike O'Brien",s:[{a:2013,b:2014}],t:1,r:0,f:1,w:0},
+{n:"Michael O'Donoghue",s:[{a:1975,b:1975}],t:1,r:1,f:0,w:0},
+{n:"Cheri Oteri",s:[{a:1995,b:2000}],t:5,r:1,f:0,w:0},
+{n:"Ashley Padilla",s:[{a:2024,b:2026}],t:2,r:0,f:1,w:0},
+{n:"Chris Parnell",s:[{a:1998,b:2006}],t:8,r:1,f:1,w:0},
+{n:"Kam Patterson",s:[{a:2025,b:2026}],t:1,r:0,f:1,w:0},
+{n:"Nasim Pedrad",s:[{a:2009,b:2014}],t:5,r:1,f:1,w:0},
+{n:"Jay Pharoah",s:[{a:2010,b:2016}],t:6,r:1,f:1,w:0},
+{n:"Joe Piscopo",s:[{a:1980,b:1984}],t:4,r:1,f:0,w:0},
+{n:"Amy Poehler",s:[{a:2001,b:2008}],t:8,r:1,f:1,w:1},
+{n:"Emily Prager",s:[{a:1981,b:1981}],t:1,r:0,f:1,w:0},
+{n:"Randy Quaid",s:[{a:1985,b:1986}],t:1,r:1,f:0,w:0},
+{n:"Colin Quinn",s:[{a:1996,b:2000}],t:5,r:1,f:1,w:1},
+{n:"Gilda Radner",s:[{a:1975,b:1980}],t:5,r:1,f:0,w:0},
+{n:"Chris Redd",s:[{a:2017,b:2022}],t:5,r:1,f:1,w:0},
+{n:"Jeff Richards",s:[{a:2001,b:2004}],t:3,r:1,f:1,w:0},
+{n:"Rob Riggle",s:[{a:2004,b:2005}],t:1,r:0,f:1,w:0},
+{n:"Ann Risley",s:[{a:1980,b:1981}],t:1,r:1,f:0,w:0},
+{n:"Tim Robinson",s:[{a:2012,b:2013}],t:1,r:0,f:1,w:0},
+{n:"Chris Rock",s:[{a:1990,b:1993}],t:3,r:1,f:0,w:0},
+{n:"Charles Rocket",s:[{a:1980,b:1981}],t:1,r:1,f:0,w:1},
+{n:"Tony Rosato",s:[{a:1981,b:1982}],t:2,r:1,f:0,w:0},
+{n:"Jon Rudnitsky",s:[{a:2015,b:2016}],t:1,r:0,f:1,w:0},
+{n:"Maya Rudolph",s:[{a:2000,b:2007}],t:9,r:1,f:1,w:0},
+{n:"Andy Samberg",s:[{a:2005,b:2012}],t:7,r:1,f:1,w:0},
+{n:"Adam Sandler",s:[{a:1991,b:1995}],t:5,r:1,f:1,w:0},
+{n:"Horatio Sanz",s:[{a:1998,b:2006}],t:8,r:1,f:1,w:1},
+{n:"Tom Schiller",s:[{a:1980,b:1980}],t:1,r:0,f:1,w:0},
+{n:"Rob Schneider",s:[{a:1990,b:1994}],t:4,r:1,f:1,w:0},
+{n:"Paul Shaffer",s:[{a:1979,b:1980}],t:1,r:0,f:1,w:0},
+{n:"Molly Shannon",s:[{a:1995,b:2001}],t:7,r:1,f:1,w:0},
+{n:"Harry Shearer",s:[{a:1979,b:1980},{a:1984,b:1985}],t:2,r:1,f:1,w:0},
+{n:"Sarah Sherman",s:[{a:2021,b:2026}],t:5,r:1,f:1,w:0},
+{n:"Martin Short",s:[{a:1984,b:1985}],t:1,r:1,f:0,w:0},
+{n:"Sarah Silverman",s:[{a:1993,b:1994}],t:1,r:0,f:1,w:0},
+{n:"Jenny Slate",s:[{a:2009,b:2010}],t:1,r:0,f:1,w:0},
+{n:"Veronika Slowikowska",s:[{a:2025,b:2026}],t:1,r:0,f:1,w:0},
+{n:"Robert Smigel",s:[{a:1991,b:1993}],t:2,r:0,f:1,w:0},
+{n:"David Spade",s:[{a:1990,b:1996}],t:6,r:1,f:1,w:0},
+{n:"Pamela Stephenson",s:[{a:1984,b:1985}],t:1,r:1,f:0,w:0},
+{n:"Ben Stiller",s:[{a:1989,b:1989}],t:1,r:0,f:1,w:0},
+{n:"Cecily Strong",s:[{a:2012,b:2022}],t:11,r:1,f:1,w:1},
+{n:"Jason Sudeikis",s:[{a:2005,b:2013}],t:9,r:1,f:1,w:0},
+{n:"Julia Sweeney",s:[{a:1990,b:1994}],t:4,r:1,f:0,w:0},
+{n:"Terry Sweeney",s:[{a:1985,b:1986}],t:1,r:1,f:0,w:0},
+{n:"Kenan Thompson",s:[{a:2003,b:2026}],t:23,r:1,f:1,w:0},
+{n:"Chloe Troast",s:[{a:2023,b:2024}],t:1,r:0,f:1,w:0},
+{n:"Danitra Vance",s:[{a:1985,b:1986}],t:1,r:1,f:0,w:0},
+{n:"Melissa Villase\u00f1or",s:[{a:2016,b:2022}],t:6,r:1,f:1,w:0},
+{n:"Dan Vitale",s:[{a:1985,b:1986}],t:1,r:0,f:1,w:0},
+{n:"Devon Walker",s:[{a:2022,b:2025}],t:3,r:1,f:1,w:0},
+{n:"Nancy Walls",s:[{a:1995,b:1996}],t:1,r:1,f:0,w:0},
+{n:"Emil Wakim",s:[{a:2024,b:2025}],t:1,r:0,f:1,w:0},
+{n:"Michaela Watkins",s:[{a:2008,b:2009}],t:1,r:0,f:1,w:0},
+{n:"Damon Wayans",s:[{a:1985,b:1986}],t:1,r:0,f:1,w:0},
+{n:"Patrick Weathers",s:[{a:1980,b:1981}],t:1,r:0,f:1,w:0},
+{n:"No\u00ebl Wells",s:[{a:2013,b:2014}],t:1,r:0,f:1,w:0},
+{n:"Brooks Wheelan",s:[{a:2013,b:2014}],t:1,r:0,f:1,w:0},
+{n:"Jane Wickline",s:[{a:2024,b:2026}],t:2,r:0,f:1,w:0},
+{n:"Kristen Wiig",s:[{a:2005,b:2012}],t:7,r:1,f:1,w:0},
+{n:"Casey Wilson",s:[{a:2008,b:2009}],t:2,r:0,f:1,w:0},
+{n:"Fred Wolf",s:[{a:1996,b:1996}],t:2,r:0,f:1,w:0},
+{n:"Bowen Yang",s:[{a:2019,b:2025}],t:7,r:1,f:1,w:0},
+{n:"Sasheer Zamata",s:[{a:2014,b:2017}],t:4,r:1,f:1,w:0},
+{n:"Alan Zweibel",s:[{a:1980,b:1980}],t:1,r:0,f:1,w:0}
+];
+
+// Expand compact data
+const cast = D.map(d=>({
+  name:d.n, stints:d.s.map(x=>({start:x.a,end:x.b})), seasons:d.t,
+  repertory:!!d.r, featured:!!d.f, weekendUpdate:!!d.w
+}));
+cast.sort((a,b)=>{
+  const as=Math.min(...a.stints.map(x=>x.start)), bs=Math.min(...b.stints.map(x=>x.start));
+  return as!==bs?as-bs:a.name.localeCompare(b.name);
+});
+
+const MIN=1975, MAX=2026, RNG=MAX-MIN+1;
+const pct=y=>((y-MIN)/RNG)*100;
+
+const ERAS=[
+  {name:"Original Cast",a:1975,b:1980,c:"#e63946"},
+  {name:"Doumanian / Ebersol",a:1980,b:1985,c:"#a855f7"},
+  {name:"Golden Age",a:1985,b:1990,c:"#f97316"},
+  {name:"Early 90s",a:1990,b:1995,c:"#eab308"},
+  {name:"Ferrell / Fey Era",a:1995,b:2004,c:"#22c55e"},
+  {name:"Digital Shorts Era",a:2004,b:2013,c:"#3b82f6"},
+  {name:"Modern Era",a:2013,b:2020,c:"#06b6d4"},
+  {name:"50th & Beyond",a:2020,b:2026,c:"#ec4899"},
+];
+
+let filters=new Set(), search='', season=0, selIdx=null;
+
+function isInSeason(m,s){
+  if(s<1||s>51) return false;
+  const yr=1974+s;
+  return m.stints.some(st=>st.start<=yr && st.end>=yr+1);
+}
+
+// === ERA BAR ===
+(function(){
+  const el=document.getElementById('eraTrack');
+  ERAS.forEach(e=>{
+    const d=document.createElement('div');
+    d.className='era-seg';
+    d.style.left=pct(e.a)+'%';
+    d.style.width=((e.b-e.a)/RNG*100)+'%';
+    d.style.background=e.c+'30';
+    d.style.borderBottom='3px solid '+e.c;
+    d.textContent=e.name;
+    el.appendChild(d);
+  });
+})();
+
+// === YEAR LABELS ===
+(function(){
+  const el=document.getElementById('yrLabels');
+  for(let y=MIN;y<=MAX;y++){
+    if(y%5===0||y===MIN){
+      const d=document.createElement('div');
+      d.className='yr-lbl';
+      d.dataset.y=y;
+      d.style.left=pct(y)+'%';
+      d.textContent=y;
+      d.onclick=()=>{const s=y-1974;if(s>=1&&s<=51){document.getElementById('slider').value=s;setSeason(s);}};
+      el.appendChild(d);
+    }
+  }
+})();
+
+// === RENDER ===
+function render(){
+  const body=document.getElementById('chartBody');
+  body.innerHTML='';
+  const sq=search.toLowerCase();
+  let shown=0, active=0;
+
+  cast.forEach((m,i)=>{
+    // filter
+    if(sq && !m.name.toLowerCase().includes(sq)) return;
+    for(const f of filters) if(!m[f]) return;
+    shown++;
+
+    const inSeason = season ? m.stints.some(s=>s.start<=1974+season && s.end>=1975+season) : true;
+    if(inSeason) active++;
+
+    const row=document.createElement('div');
+    row.className='row'+(season && !inSeason?' dimmed':'')+(selIdx===i?' sel':'');
+    row.onclick=()=>select(i);
+
+    const nm=document.createElement('div');
+    nm.className='nm';
+    nm.textContent=m.name;
+    nm.title=m.name;
+    row.appendChild(nm);
+
+    const tl=document.createElement('div');
+    tl.className='tl';
+
+    // grid
+    for(let y=MIN;y<=MAX;y+=5){
+      const g=document.createElement('div');
+      g.className='gl'+(y%10===0?' major':' minor');
+      g.style.left=pct(y)+'%';
+      tl.appendChild(g);
+    }
+
+    // season highlight
+    if(season){
+      const h=document.createElement('div');
+      h.className='shl';
+      h.style.left=pct(1974+season)+'%';
+      h.style.width=(1/RNG*100)+'%';
+      tl.appendChild(h);
+    }
+
+    // new/last detection for selected season
+    const isNew = season && inSeason && !isInSeason(m, season-1);
+    const isLast = season && inSeason && !isInSeason(m, season+1) && Math.max(...m.stints.map(x=>x.end)) < 2026;
+
+    // bars
+    m.stints.forEach(st=>{
+      const bar=document.createElement('div');
+      const cls=m.repertory&&m.featured?'both':m.repertory?'rep':'feat';
+      bar.className='bar '+cls+(m.weekendUpdate?' wu':'')+(st.end>=2026?' current':'');
+      bar.style.left=pct(st.start)+'%';
+      bar.style.width=Math.max(((st.end-st.start)/RNG)*100,0.3)+'%';
+      // add new/last dots on the stint that covers the selected season
+      const yr=1974+season;
+      if(season && st.start<=yr && st.end>=yr+1){
+        if(isNew){const d=document.createElement('span');d.className='new-dot';bar.appendChild(d);}
+        if(isLast){const d=document.createElement('span');d.className='last-dot';bar.appendChild(d);}
+      }
+      bar.onmouseenter=e=>showTip(e,m);
+      bar.onmouseleave=hideTip;
+      bar.onmousemove=moveTip;
+      tl.appendChild(bar);
+    });
+
+    row.appendChild(tl);
+    body.appendChild(row);
+  });
+
+  // year label highlights
+  document.querySelectorAll('.yr-lbl').forEach(l=>{
+    l.classList.toggle('hl', season && parseInt(l.dataset.y)===1974+season);
+  });
+  // toggle season legend items
+  document.querySelectorAll('.season-legend').forEach(el=>{el.style.display=season?'':'none';});
+
+  const ct=document.getElementById('count');
+  ct.textContent = season ? `${active} active / ${shown} shown` : `${shown} cast members`;
+}
+
+// === TOOLTIP ===
+const tip=document.getElementById('tip');
+function showTip(e,m){
+  const yrs=m.stints.map(s=>s.start===s.end?''+s.start:s.start+'\u2013'+(s.end>=2026?'present':s.end)).join(', ');
+  let tags='';
+  if(m.repertory) tags+='<span class="tag" style="background:rgba(230,57,70,.2);color:var(--rep)">Repertory</span>';
+  if(m.featured) tags+='<span class="tag" style="background:rgba(69,123,157,.2);color:var(--feat)">Featured</span>';
+  if(m.weekendUpdate) tags+='<span class="tag" style="background:rgba(42,157,143,.2);color:var(--update)">WU Anchor</span>';
+  tip.innerHTML=`<h3>${m.name}</h3><div class="yrs">${yrs} \u00b7 ${m.seasons} season${m.seasons!==1?'s':''}</div><div class="tags">${tags}</div>`;
+  tip.classList.add('on');
+  moveTip(e);
+}
+function moveTip(e){
+  let x=e.clientX+14,y=e.clientY+14;
+  const r=tip.getBoundingClientRect();
+  if(x+r.width>innerWidth) x=e.clientX-r.width-14;
+  if(y+r.height>innerHeight) y=e.clientY-r.height-14;
+  tip.style.left=x+'px';tip.style.top=y+'px';
+}
+function hideTip(){tip.classList.remove('on');}
+
+// === DETAIL PANEL ===
+function select(i){
+  if(selIdx===i){selIdx=null;panelMode=null;document.getElementById('panel').classList.remove('open');render();return;}
+  selIdx=i;
+  panelMode='cast';
+  const m=cast[i];
+  const p=document.getElementById('panel');
+  const inner=document.getElementById('panelInner');
+
+  const yrs=m.stints.map(s=>s.start===s.end?''+s.start:s.start+'\u2013'+(s.end>=2026?'present':s.end));
+  const fs=Math.min(...m.stints.map(x=>x.start)), le=Math.max(...m.stints.map(x=>x.end));
+
+  let badges='';
+  if(m.repertory) badges+='<span class="pbadge rep">Repertory Player</span>';
+  if(m.featured) badges+='<span class="pbadge feat">Featured Player</span>';
+  if(m.weekendUpdate) badges+='<span class="pbadge wu">Weekend Update Anchor</span>';
+
+  let mbars=m.stints.map(s=>{
+    const l=pct(s.start),w=Math.max(((s.end-s.start)/RNG)*100,0.8);
+    const bg=m.repertory&&m.featured?'linear-gradient(90deg,#457b9d,#e63946)':m.repertory?'var(--rep)':'var(--feat)';
+    return `<div class="mini-bar" style="left:${l}%;width:${w}%;background:${bg}"></div>`;
+  }).join('');
+
+  // castmates
+  const mates=cast.filter((c,j)=>j!==i&&m.stints.some(s1=>c.stints.some(s2=>s1.start<s2.end&&s2.start<s1.end)));
+  const mateTags=mates.slice(0,40).map(c=>`<span class="cm-tag" onclick="jumpTo('${c.name.replace(/'/g,"\\'")}')">${c.name}</span>`).join('');
+
+  inner.innerHTML=`
+    <button class="panel-close" onclick="closePanel()">\u00d7</button>
+    <h2>${m.name}</h2>
+    <div class="panel-sub">${yrs.join(', ')} \u00b7 ${m.seasons} season${m.seasons!==1?'s':''}</div>
+    <div class="psec"><h3>Timeline</h3><div class="mini-tl">${mbars}</div><div class="mini-lbl"><span>1975</span><span>2000</span><span>2026</span></div></div>
+    <div class="psec"><h3>Roles</h3><div class="p-badges">${badges||'<span style="color:var(--text3);font-size:.82rem">Cast member</span>'}</div></div>
+    <div class="psec">
+      <div class="p-stat"><span class="p-stat-k">Total Seasons</span><span class="p-stat-v">${m.seasons}</span></div>
+      <div class="p-stat"><span class="p-stat-k">First Season</span><span class="p-stat-v">S${fs-1974} (${fs})</span></div>
+      <div class="p-stat"><span class="p-stat-k">Last Season</span><span class="p-stat-v">${le>=2026?'Current':'S'+(le-1974)+' ('+le+')'}</span></div>
+      <div class="p-stat"><span class="p-stat-k">Stints</span><span class="p-stat-v">${m.stints.length}</span></div>
+    </div>
+    <div class="psec"><h3>Castmates (${mates.length})</h3><div class="castmates">${mateTags}${mates.length>40?'<span class="cm-tag" style="color:var(--text3)">+'+(mates.length-40)+' more</span>':''}</div></div>
+  `;
+  p.classList.add('open');
+  render();
+}
+function closePanel(){selIdx=null;panelMode=null;document.getElementById('panel').classList.remove('open');render();}
+function jumpTo(name){
+  const i=cast.findIndex(c=>c.name===name);
+  if(i>=0){select(i);const rows=document.querySelectorAll('.row');if(rows[i])rows[i].scrollIntoView({behavior:'smooth',block:'center'});}
+}
+
+// === SEASON PICKER ===
+function buildPicker(){
+  const el=document.getElementById('seasonPicker');
+  let html='<div class="sp-header"><h3>Jump to Season</h3><button class="sp-all" onclick="setSeason(0)">All Seasons</button></div>';
+  ERAS.forEach(era=>{
+    html+=`<div class="sp-era"><div class="sp-era-label"><span class="sp-era-dot" style="background:${era.c}"></span>${era.name} (${era.a}\u2013${era.b})</div><div class="sp-grid">`;
+    for(let y=era.a;y<era.b;y++){
+      const s=y-1974;
+      if(s>=1&&s<=51) html+=`<button class="sp-btn" data-s="${s}" onclick="setSeason(${s})"><span class="sp-snum">S${s}</span><span class="sp-yr">${y}\u2013${y+1}</span></button>`;
+    }
+    html+='</div></div>';
+  });
+  el.innerHTML=html;
+}
+buildPicker();
+
+function togglePicker(){
+  const el=document.getElementById('seasonPicker');
+  const sv=document.getElementById('sval');
+  el.classList.toggle('open');
+  sv.classList.toggle('picker-open');
+}
+// Close picker on outside click
+document.addEventListener('click',e=>{
+  const pk=document.getElementById('seasonPicker');
+  const ctrl=document.querySelector('.season-ctrl');
+  if(pk.classList.contains('open') && !ctrl.contains(e.target)){
+    pk.classList.remove('open');
+    document.getElementById('sval').classList.remove('picker-open');
+  }
+});
+
+function updatePickerActive(){
+  document.querySelectorAll('.sp-btn').forEach(b=>{
+    b.classList.toggle('active',parseInt(b.dataset.s)===season);
+  });
+}
+
+// === SEASON DETAIL (in right panel) ===
+let panelMode=null; // 'cast' | 'season' | null
+function showSeasonInPanel(){
+  if(!season){
+    if(panelMode==='season'){panelMode=null;document.getElementById('panel').classList.remove('open');}
+    return;
+  }
+  selIdx=null; // clear cast selection
+  panelMode='season';
+
+  const yr=1974+season;
+  const era=ERAS.find(e=>yr>=e.a&&yr<e.b);
+
+  const rep=[],feat=[],wu=[],newCast=[],lastCast=[];
+  cast.forEach(m=>{
+    const inSeason=m.stints.some(s=>s.start<=yr && s.end>=yr+1);
+    if(!inSeason) return;
+    if(m.weekendUpdate) wu.push(m);
+    if(m.repertory && !m.featured) rep.push(m);
+    else if(m.featured && !m.repertory) feat.push(m);
+    else if(m.repertory && m.featured) rep.push(m);
+    else feat.push(m);
+    // new: not in previous season
+    if(!isInSeason(m, season-1)) newCast.push(m);
+    // last: not in next season and not current
+    if(!isInSeason(m, season+1) && Math.max(...m.stints.map(s=>s.end)) < 2026) lastCast.push(m);
+  });
+
+  const total=new Set([...rep,...feat].map(m=>m.name)).size;
+  const makeTags=(list,cls)=>list.map(m=>`<span class="sd-cast-tag ${cls}" onclick="jumpTo('${m.name.replace(/'/g,"\\'")}')">${m.name}</span>`).join('');
+  const makeNewLastTags=(list,color)=>list.map(m=>`<span class="sd-cast-tag" style="background:${color}15;color:${color};border:1px solid ${color}30" onclick="jumpTo('${m.name.replace(/'/g,"\\'")}')">${m.name}</span>`).join('');
+
+  const p=document.getElementById('panel');
+  const inner=document.getElementById('panelInner');
+  inner.innerHTML=`
+    <button class="panel-close" onclick="setSeason(0)">\u00d7</button>
+    <h2>Season ${season}</h2>
+    <div class="panel-sub">${yr}\u2013${yr+1}</div>
+    ${era?`<div class="psec"><span class="pbadge" style="background:${era.c}22;color:${era.c};border:1px solid ${era.c}44;font-size:.75rem">${era.name}</span></div>`:''}
+    <div class="psec">
+      <div class="p-stat"><span class="p-stat-k">Cast Members</span><span class="p-stat-v">${total}</span></div>
+      <div class="p-stat"><span class="p-stat-k">Repertory</span><span class="p-stat-v">${rep.length}</span></div>
+      <div class="p-stat"><span class="p-stat-k">Featured</span><span class="p-stat-v">${feat.length}</span></div>
+      <div class="p-stat"><span class="p-stat-k">WU Anchors</span><span class="p-stat-v">${wu.length}</span></div>
+      <div class="p-stat"><span class="p-stat-k">New</span><span class="p-stat-v" style="color:#22c55e">${newCast.length}</span></div>
+      <div class="p-stat"><span class="p-stat-k">Departing</span><span class="p-stat-v" style="color:#f97316">${lastCast.length}</span></div>
+    </div>
+    ${newCast.length?`<div class="sd-group"><h4 style="font-size:.72rem;text-transform:uppercase;letter-spacing:.8px;color:#22c55e;font-weight:600;margin-bottom:6px">New (${newCast.length})</h4><div class="sd-cast">${makeNewLastTags(newCast,'#22c55e')}</div></div>`:''}
+    ${lastCast.length?`<div class="sd-group"><h4 style="font-size:.72rem;text-transform:uppercase;letter-spacing:.8px;color:#f97316;font-weight:600;margin-bottom:6px">Last Season (${lastCast.length})</h4><div class="sd-cast">${makeNewLastTags(lastCast,'#f97316')}</div></div>`:''}
+    ${rep.length?`<div class="sd-group"><h4 style="font-size:.72rem;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);font-weight:600;margin-bottom:6px">Repertory (${rep.length})</h4><div class="sd-cast">${makeTags(rep,'rep')}</div></div>`:''}
+    ${feat.length?`<div class="sd-group"><h4 style="font-size:.72rem;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);font-weight:600;margin-bottom:6px">Featured (${feat.length})</h4><div class="sd-cast">${makeTags(feat,'feat')}</div></div>`:''}
+    ${wu.length?`<div class="sd-group"><h4 style="font-size:.72rem;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);font-weight:600;margin-bottom:6px">Weekend Update (${wu.length})</h4><div class="sd-cast">${makeTags(wu,'wu')}</div></div>`:''}
+  `;
+  p.classList.add('open');
+}
+
+// === SEASON SLIDER ===
+function setSeason(v){
+  season=parseInt(v);
+  document.getElementById('slider').value=season;
+  document.getElementById('sval').textContent=season?`Season ${season} (${1974+season}\u2013${1975+season})`:'All Seasons';
+  // Close picker
+  document.getElementById('seasonPicker').classList.remove('open');
+  document.getElementById('sval').classList.remove('picker-open');
+  updatePickerActive();
+  showSeasonInPanel();
+  render();
+}
+document.getElementById('slider').addEventListener('input',e=>setSeason(e.target.value));
+
+// === SEARCH ===
+document.getElementById('search').addEventListener('input',e=>{search=e.target.value;render();});
+
+// === FILTERS ===
+document.querySelectorAll('.fbtn').forEach(b=>{
+  b.onclick=()=>{
+    const f=b.dataset.f;
+    if(filters.has(f)){filters.delete(f);b.classList.remove('active');}
+    else{filters.add(f);b.classList.add('active');}
+    render();
+  };
+});
+
+// === KEYBOARD ===
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(panelMode==='cast') closePanel();
+    else if(panelMode==='season') setSeason(0);
+  }
+});
+
+// === INIT ===
+render();
+</script>
+</body>
+</html>
